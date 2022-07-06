@@ -51,6 +51,7 @@ while iVarArg <= length(varargin)
     argOkay = true;
     switch varargin{iVarArg},
         case 'nBins',        nBins = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
+        case 'MethodAssign',    MethodAssign = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
         otherwise,
             argOkay = false;
     end
@@ -73,7 +74,10 @@ DataRaster = zeros([1,nTime,nTrials]);
 DataRaster(1,:,:) = data;
 
 % State the data using uniform width bins
-MethodAssign = {1,1,'UniWB',{nBins}};
+if ~exist('MethodAssign')
+    MethodAssign = {1,1,'UniWB',{nBins}};
+end
+% State the data using uniform width bins
 StatesRaster = data2states(DataRaster, MethodAssign);
 % !!! Note !!! Many other stating options exist. See help data2states.
 
