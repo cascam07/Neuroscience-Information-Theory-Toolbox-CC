@@ -31,6 +31,11 @@
 %     number of time bins (matching the data category from DataRaster) by
 %     2. 
 %
+%   (..., tau) - time delay variable (l in original paper; Staniek and 
+%     Lehnertz, 2008). Number of samples between datapoints used for 
+%     symbolization. Making this larger increases the time-scale of 
+%     information transfer. Default is 1 (i.e. all neighboring points used). 
+%
 % Outputs:
 %   StatesRaster (cell array or double array) - trial state data. If a
 %     double array is used, it should be number of variables by number of
@@ -65,10 +70,21 @@ function [StatesRaster] = symbolicdata2states(DataRaster, SymbInfo, varargin)
 %% Parse command line for parameters
 TBOpt = false;
 timeboundaries = NaN;
+tau = 1;
 
-if length(varargin) == 1
-    timeboundaries = varargin{1};
-    TBOpt = true;
+iVarArg = 1;
+while iVarArg <= length(varargin)
+    argOkay = true;
+    switch varargin{iVarArg},
+        case 'timeboundaries',  timeboundaries = varargin{iVarArg+1}; iVarArg = iVarArg + 1; TBOpt = true;
+        case 'tau',             tau = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
+        otherwise,
+            argOkay = false;
+    end
+    if ~argOkay
+        disp(['(QUICKTE) Ignoring invalid argument #' num2str(iVarArg+1)]);
+    end
+    iVarArg = iVarArg + 1;
 end
 
 %% Perform Initial Operations
@@ -123,43 +139,42 @@ end
 % Copy everything over
 StatesRaster = DataRaster;
 
-for iConv = 1:size(WordInfo,1)
+for iConv = 1:size(SymbInfo,1)
     
-    if size(DataRaster{WordInfo(iConv,1)},3) > 1 % Trial Based Data
-        
+    if size(DataRaster{SymbInfo(iConv,1)},3) > 1 % Trial Based Data        
         % Combine states for unique rankings across trials
-        nT = size(DataRaster{WordInfo(iConv,1)},2);
-        Temp1 = NaN(size(DataRaster{WordInfo(iConv,1)}) - [0,WordInfo(iConv,2) - 1,0]);
-        for iVar = 1:size(DataRaster{WordInfo(iConv,1)},1)
-            for iT = 1:(nT - WordInfo(iConv,2) + 1)
-                Temp2 = squeeze(DataRaster{WordInfo(iConv,1)}(iVar,iT:(iT + WordInfo(iConv,2) - 1),:));
+        nT = size(DataRaster{SymbInfo(iConv,1)},2);
+        Temp1 = NaN(size(DataRaster{SymbInfo(iConv,1)}) - [0,SymbInfo(iConv,2) - 1,0]);
+        for iVar = 1:size(DataRaster{SymbInfo(iConv,1)},1)
+            for iT = 1:(nT - SymbInfo(iConv,2) + 1)
+                Temp2 = squeeze(DataRaster{SymbInfo(iConv,1)}(iVar,iT:(iT + SymbInfo(iConv,2) - 1),:));
                 [Y,Temp2] = sort(Temp2,1,'ascend');
                 [B,I,Temp1(iVar,iT,:)] = unique(Temp2','rows');
             end
         end
-        StatesRaster{WordInfo(iConv,1)} = Temp1;
+        StatesRaster{SymbInfo(iConv,1)} = Temp1;
         
-    else % Single Trial Data
-        
+    else % Single Trial Data      
         % Combine states for unique rankings across time
-        nT = size(DataRaster{WordInfo(iConv,1)},2);
-        Temp1 = NaN(size(DataRaster{WordInfo(iConv,1)}) - [0,WordInfo(iConv,2) - 1]);
-        for iVar = 1:size(DataRaster{WordInfo(iConv,1)},1)
-            Temp2 = NaN([nT - WordInfo(iConv,2) + 1,WordInfo(iConv,2)]);
-            for iT = 1:WordInfo(iConv,2)
-                Temp2(:,iT) = DataRaster{WordInfo(iConv,1)}(iVar,iT:(nT - WordInfo(iConv,2) + iT));
+        nT = size(DataRaster{SymbInfo(iConv,1)},2);
+        Temp1 = NaN(size(DataRaster{SymbInfo(iConv,1)},1), ceil((nT - (SymbInfo(iConv,2)*tau)+1)/tau));
+        for iVar = 1:size(DataRaster{SymbInfo(iConv,1)},1)
+            Temp2 = NaN([size(Temp1,2),SymbInfo(iConv,2)]);
+            for iT = 1:SymbInfo(iConv,2)
+                Temp2(:,iT) = DataRaster{SymbInfo(iConv,1)}(iVar,iT*tau:tau:(nT - (SymbInfo(iConv,2)*tau)+iT*tau));
             end
-            [Y,Temp2] = sort(Temp2,2,'ascend');
-            [B,I,Temp1(iVar,:)] = unique(Temp2,'rows');
+            [~,ii]=sort(Temp2,2,'Ascend');
+            [~,r]=sort(ii,2);
+            [B,I,Temp1(iVar,:)] = unique(r,'rows');
         end
-        StatesRaster{WordInfo(iConv,1)} = Temp1;
+        StatesRaster{SymbInfo(iConv,1)} = Temp1;
         
     end
     
     if TBOpt % Correct the time boundaries
         
-        timeboundaries{WordInfo(iConv,1)}(1:(nT - WordInfo(iConv,2) + 1),2) = timeboundaries{WordInfo(iConv,1)}(WordInfo(iConv,2):nT,2);
-        timeboundaries{WordInfo(iConv,1)}((nT - WordInfo(iConv,2) + 2):nT,:) = [];
+        timeboundaries{SymbInfo(iConv,1)}(1:(nT - SymbInfo(iConv,2) + 1),2) = timeboundaries{SymbInfo(iConv,1)}(SymbInfo(iConv,2):nT,2);
+        timeboundaries{SymbInfo(iConv,1)}((nT - SymbInfo(iConv,2) + 2):nT,:) = [];
         
     end
     
