@@ -119,6 +119,7 @@ while iVarArg <= length(varargin)
         case 'delayTrans',      delayTrans = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
         case 'MCpThresh',       MCpThresh = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
         case 'MCnSamples',      MCnSamples = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
+        case 'MethodAssign',    MethodAssign = varargin{iVarArg+1}; iVarArg = iVarArg + 1;
         otherwise,
             argOkay = false;
     end
@@ -161,12 +162,15 @@ end
 DataRaster = zeros([2,nTime,nTrials]);
 
 % Put the data in the data raster
-DataRaster(1,:,:) = dataRec;
-DataRaster(2,:,:) = dataTrans;
+DataRaster(2,:,:) = dataRec;
+DataRaster(1,:,:) = dataTrans;
 
 % State the data using uniform width bins
-MethodAssign = {1,1,'UniWB',{nBins};...
-    1,2,'UniWB',{nBins}};
+if ~exist('MethodAssign')
+    MethodAssign = {1,1,'UniWB',{nBins};...
+                    1,2,'UniWB',{nBins}};
+end
+
 StatesRaster = data2states(DataRaster, MethodAssign);
 % !!! Note !!! Many other stating options exist. See help data2states.
 
